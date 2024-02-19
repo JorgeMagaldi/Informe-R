@@ -1,0 +1,246 @@
+---
+title: "Analisis del Mercado Inmobiliario en Cali"
+author: "Jorge Magaldi"
+date: "2024-02-18"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+    code folding: hide
+    code_download: true
+    number sections: true
+    warning: false
+    theme: cerulean 
+  pdf_document:
+    toc: true
+subtitle: Actividad 1
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+
+```
+
+# Introducción
+ La empresa B&C ha recopilado una base de datos que contiene información relevante sobre viviendas en Cali. Esta base de datos incluye detalles sobre el precio, ubicación, características y ventas de viviendas. El objetivo del informe estadístico es proporcionar una visión completa del mercado inmobiliario en diferentes zonas de la ciudad.
+
+## Precio de las Viviendas por Zona
+Para comenzar, analizaremos el precio de las viviendas en distintas zonas de Cali. Utilizaremos estadísticas descriptivas para comprender mejor la distribución de los precios. A continuación, presentamos algunos resultados preliminares:
+
+### Resumen Estadístico por Zona
+Hemos calculado las siguientes métricas para cada zona:
+
+#### Valores por Zonas
+- **Precio Promedio**: Zona Centro: 310 M. Zona Norte: 346 M. Zona Oeste: 679M. Zona Oriente: 229M. Zona Sur: 427M
+- **Valor Mínimo**: Zona Centro: 110 M. Zona Norte: 65 M. Zona Oeste: 85M. Zona Oriente: 58M. Zona Sur: 75M
+- **Valor Máximo**: Zona Centro: 1100 M. Zona Norte: 1940 M. Zona Oeste: 1999M. Zona Oriente: 1350M. Zona Sur: 1900M
+
+En los siguientes apartados, profundizaremos en los análisis específicos por zona y exploraremos tendencias adicionales en el mercado inmobiliario de Cali.
+
+
+
+
+```{r results='markup', include=FALSE}
+library(paqueteMETODOS)
+data("vivienda_faltantes")
+
+resumen_por_zona <- vivienda_faltantes %>%
+  group_by(zona) %>%
+  summarise(
+    PrecioPromedio = mean(preciom),
+    PrecioMediano = median(preciom),
+    DesviacionEstandar = sd(preciom),
+    Minimo = min(preciom),
+    Maximo = max(preciom)
+  )
+
+
+library(ggplot2)
+library(dplyr)
+resumen_por_zona <- vivienda_faltantes %>%
+  group_by(zona) %>%
+  summarise(
+    PrecioPromedio = mean(preciom),
+    PrecioMediano = median(preciom),
+    DesviacionEstandar = sd(preciom),
+    Minimo = min(preciom),
+    Maximo = max(preciom)
+  )
+
+
+
+# Tratamiento de valores anómalos y atípicos (por ejemplo, eliminación de valores extremos)
+# Puedes ajustar el umbral según tus necesidades
+vivienda_faltantes <- vivienda_faltantes %>%
+  filter(preciom > 0 & preciom < 8331)  # Ejemplo: valores entre 0 y 1 millón
+
+hist(vivienda_faltantes$preciom, main = "Histograma del Precio de las Viviendas", xlab = "Precio")
+
+```{r resumen, echo=FALSE}
+vivienda_faltantes_filtrado <- vivienda_faltantes[!is.na(vivienda_faltantes$zona), ]
+ggplot(vivienda_faltantes_filtrado, aes(x = preciom, fill = zona)) +
+  geom_bar() +
+  labs(title = "Distribución del Precio de las Viviendas por Zona", x = "Precio", y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "top", plot.title = element_text(hjust = 0.5, face = "bold", size = 16)) +
+  scale_fill_manual(values = c("Zona Norte" = "gray", "Zona Centro" = "blue", "Zona Sur" = "green", "Zona Oeste" = "orange", "Zona Oriente" = "red")) +
+  facet_wrap(~zona, scales = "free") +
+  guides(fill = guide_legend(title = NULL))
+```
+
+
+
+## Tipo de Viviendas más Ofertadas en Cali
+
+Continuando con nuestro análisis, ahora identificaremos el tipo de vivienda que más se oferta en la Sucursal del Cielo, teniendo en cuenta la base de datos suministrada.
+
+### Resumen Estadístico por Zona
+Hemos calculado las siguientes métricas para cada zona:
+
+
+```{r summary_tipo_viviendas, echo=FALSE}
+
+library(dplyr)
+
+vivienda_faltantes <- na.omit(vivienda_faltantes, cols = "tipo_vivienda")
+# Convertir las variables "Apartamento", "APARTAMENTO" y "apto" a "APARTAMENTO"
+vivienda_faltantes$APARTAMENTO <- ifelse(vivienda_faltantes$tipo %in% c("Apartamento", "APARTAMENTO", "apto"), 1, 0)
+
+# Convertir las variables "casa", "Casa" y "CASA" a "CASA"
+vivienda_faltantes$CASA <- ifelse(vivienda_faltantes$tipo %in% c("casa", "Casa", "CASA"), 1, 0)
+
+# Eliminar la variable original "tipo"
+vivienda_faltantes <- subset(vivienda_faltantes, select = -tipo)
+
+library(ggplot2)
+
+ggplot(vivienda_faltantes, aes(x = "", fill = factor(CASA))) +
+  geom_bar(width = 1) +
+  coord_polar("y", start = 0) +
+  labs(title = "Distribución del Tipo de Viviendas Ofertadas en Cali") +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        legend.title = element_blank()) +
+  scale_fill_manual(values = c("turquoise", "blue")) +
+  guides(fill = guide_legend(title = "Tipo de Vivienda", ncol = 2))
+
+total_apartamentos <- sum(vivienda_faltantes$APARTAMENTO == 1)
+total_casas <- sum(vivienda_faltantes$CASA == 1)
+
+# Reemplazar los números 0 y 1 con las palabras "APARTAMENTO" y "CASA" respectivamente
+tipo_vivienda <- c("APARTAMENTO", "CASA")
+
+total_tipo_vivienda <- c(total_apartamentos, total_casas)
+
+# Crear un marco de datos con los valores
+resultado <- data.frame(Tipo_Vivienda = tipo_vivienda, Total = total_tipo_vivienda)
+
+# Dar formato de tabla a los valores
+knitr::kable(resultado, format = "markdown")
+
+
+# Mostrar los resultados
+if (total_apartamentos > total_casas) {
+  cat("El tipo de vivienda más ofertado en Cali es APARTAMENTO, con un total de", total_apartamentos, "viviendas.")
+} else if (total_casas > total_apartamentos) {
+  cat("El tipo de vivienda más ofertado en Cali es **CASA**, con un total de", total_casas, "viviendas.")
+} else {
+  cat("El número de viviendas ofertadas como **APARTAMENTO** y **CASA** es igual en Cali.")
+}
+```
+
+
+
+# Características más relevantes de la oferta de vivienda en Cali.
+
+
+## Características más Relevantes de Vivendas en Cali
+```{r echo=FALSE, include=FALSE}
+
+# Instalamos y cargamos el paquete 'reader'
+if (!requireNamespace("reader", quietly = TRUE)) {
+  install.packages("reader")
+}
+library(reader)
+library(plotly)
+
+library(paqueteMETODOS)
+data("vivienda_faltantes")
+
+# Con"vivienda_faltantes"# Convertimos la base de datos a un data frame de R
+vivienda_df <- as.data.frame(vivienda_faltantes)
+
+# Realizamos la limpieza de datos
+# Por ejemplo, eliminamos filas con valores faltantes en las variables de interés
+vivienda_clean <- vivienda_faltantes
+vivienda_clean$piso <- factor(vivienda_clean$piso)
+vivienda_clean$estrato <- factor(vivienda_clean$estrato)
+vivienda_clean$parquea <- factor(vivienda_clean$parquea)
+vivienda_clean$banios <- factor(vivienda_clean$banios)
+vivienda_clean$habitac <- factor(vivienda_clean$habitac)
+
+# Generamos el histograma de las variables de interés
+histograma_3d_piso <- plot_ly(vivienda_clean, x = ~piso, type = "histogram", name = "Piso") %>%
+  layout(scene = list(xaxis = list(title = "Piso"), yaxis = list(title = "Frecuencia"), zaxis = list(title = "Cantidad")))
+
+histograma_3d_estrato <- plot_ly(vivienda_clean, x = ~estrato, type = "histogram", name = "Estrato") %>%
+  layout(scene = list(xaxis = list(title = "Estrato"), yaxis = list(title = "Frecuencia"), zaxis = list(title = "Cantidad")))
+
+histograma_3d_parquea <- plot_ly(vivienda_clean, x = ~parquea, type = "histogram", name = "Parqueadero") %>%
+  layout(scene = list(xaxis = list(title = "Parqueadero"), yaxis = list(title = "Frecuencia"), zaxis = list(title = "Cantidad")))
+
+histograma_3d_banios <- plot_ly(vivienda_clean, x = ~banios, type = "histogram", name = "Baños") %>%
+  layout(scene = list(xaxis = list(title = "Baños"), yaxis = list(title = "Frecuencia"), zaxis = list(title = "Cantidad")))
+
+histograma_3d_habitac <- plot_ly(vivienda_clean, x = ~habitac, type = "histogram", name = "Habitaciones") %>%
+  layout(scene = list(xaxis = list(title = "Habitaciones"), yaxis = list(title = "Frecuencia"), zaxis = list(title = "Cantidad")))
+
+# Mostramos los histogramas en una única ventana
+subplot(histograma_3d_piso, histograma_3d_estrato, histograma_3d_parquea, histograma_3d_banios, histograma_3d_habitac)
+
+
+```
+
+```{r message=FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(paqueteMETODOS)
+install.packages("dslabs")
+library(dslabs)
+data("vivienda_faltantes")
+library(dplyr)
+library(ggplot2)
+install.packages("leaflet")
+library(leaflet)
+
+# Crear el mapa centrado en Cali
+mapa_cali <- leaflet() %>%
+  setView(lng = -76.5225, lat = 3.4516, zoom = 14) %>%
+  addTiles()  # Añadir capa de teselas de OpenStreetMap
+
+# Agregar una capa de marcadores con la variable 'preciom'
+mapa_cali <- mapa_cali %>%
+  addCircleMarkers(data = vivienda_faltantes, 
+                   lng = ~longitud, lat = ~latitud, 
+                   radius = 5, color = "deeppink", fillOpacity = 0.8, 
+                   popup = ~paste("Precio: $", preciom))
+
+# Crear un título personalizado HTML y aplicar estilos CSS para centrarlo
+titulo_html <- '<div style="text-align: center; font-size: 18px; font-weight: bold;">Mapa de Precios de Viviendas en Cali</div>'
+
+# Agregar título al mapa como un control HTML
+mapa_cali <- mapa_cali %>%
+  addControl(html = titulo_html, position = "topright")
+
+# Mostrar el mapa
+mapa_cali
+
+
+
+
+
+```
+
+
